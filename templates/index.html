@@ -1,0 +1,84 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link rel="stylesheet" href="{% static 'style.css' %}">
+  <link rel="stylesheet" href="{% static 'HeroSection.css' %}">
+  <link rel="stylesheet" href="{% static 'Buttons.css' %}">
+  <link rel="stylesheet" href="{% static 'Navbar.css' %}">
+  <style>
+    body {
+      background: #242424;
+    }
+  </style>
+</head>
+
+<body>
+  <nav class="navbar">
+    <div class="navbar-container">
+      <a href="/" class="navbar-logo">
+        <img src='https://pbs.twimg.com/profile_images/585337421434265600/0lMPLueB_400x400.png' width="40" height="40"
+          style="border-radius: .5rem;" />
+        <h4>JECRC UNIVERSITY</h4>
+      </a>
+      <div class="menu-icon" onclick="handleClick">
+      </div>
+      <ul class='nav-menu'>
+        <li class="nav-item"><a href="/admin/" class="nav-links">Admin</a></li>
+        <li class="nav-item"><a href="/reports/" class="nav-links">Reports</a></li>
+        <span style="color: white;">|</span>
+        {% for block in blocks %}
+        <li class="nav-item"><a href="/get/{{block.id}}" class="nav-links">{{block.name}}</a></li>
+        <!-- <li class="nav-item"><a href="/get/2" class="nav-links">Science Block</a></li>
+        <li class="nav-item"><a href="/get/1" class="nav-links">Law Block</a></li> -->
+        {% endfor %}
+      </ul>
+    </div>
+  </nav>
+
+  <div class="home__hero-section">
+    <div class="container">
+      <div class="top-line">
+      </div>
+      <div class="row home__hero-row" id="tableContainer">
+        <table class="container">
+          <thead>
+            <tr>
+              <th>cam</th>
+              <th>P1</th>
+              <th>P2</th>
+              <th>P3</th>
+              <th>P4</th>
+              <th>P5</th>
+              <th>P6</th>
+              <th>P7</th>
+              <th>P8</th>
+              <th>P9</th>
+              <th>P10</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in data %}
+            <tr>
+              <td>{{d.name}}</td>
+                {% for val in d.today %}
+              <td>{{val}}</td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <!-- <script src="main.js"></script> -->
+  <!-- <script> -->
+  <!-- window.onload = selectBlock('Law Block'); -->
+  <!-- </script> -->
+</body>
+
+</html>

@@ -1,0 +1,19 @@
+<!-- <tr>
+    <td>{{cam}}</td>
+    {% for data in aldata %}
+    <td>{{data.count}}</td>
+    {% endfor %}
+</tr> -->
+
+{% for ds, d in aldata.items %}
+<tr>
+    <td>{{ds}}</td>
+    {% for got in d %}
+    <td>
+        {% for s in got %}
+        <div>{{s}}</div>
+        {% endfor %}
+    </td>
+    {% endfor %}
+</tr>
+{% endfor %}

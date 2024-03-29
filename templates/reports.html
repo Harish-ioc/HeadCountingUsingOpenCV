@@ -1,0 +1,312 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reports</title>
+  <link rel="stylesheet" href="{% static 'style.css' %}">
+  <link rel="stylesheet" href="{% static 'HeroSection.css' %}">
+  <link rel="stylesheet" href="{% static 'Buttons.css' %}">
+  <link rel="stylesheet" href="{% static 'Navbar.css' %}">
+  <style>
+    body {
+      background: #242424;
+    }
+    td{
+      max-width: 35px;
+    }
+    .home__hero-section{
+      height: auto;
+      padding-bottom: 0px;
+    }
+    .container{
+      padding-bottom: 0px;
+    }
+    .searchnav {
+      display: flex;
+      justify-content: center;
+    }
+
+    .searchnav>.inele {
+      margin: 10px;
+    }
+
+    .downloadButton {
+      border: 1px solid white;
+      border-radius: 10px;
+      padding: 5px;
+    }
+
+    .downloadButton:hover {
+      cursor: pointer;
+    }
+
+    #canvas {
+      width: 70vh !important;
+      height: 70vh !important;
+      margin: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <nav class="navbar">
+    <div class="navbar-container">
+      <a href="/" class="navbar-logo">
+        <img src='https://pbs.twimg.com/profile_images/585337421434265600/0lMPLueB_400x400.png' width="40" height="40"
+          style="border-radius: .5rem;" />
+        <h4>JECRC UNIVERSITY</h4>
+      </a>
+      <div class="menu-icon" style="display: block;">
+        <ul class='nav-menu'>
+          <li class="nav-item"><a href="/" class="nav-links">Home</a></li>
+          <li class="nav-item"><a href="/reports/insight/" class="nav-links">Insight</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+
+  <div class="home__hero-section">
+    <div class="searchnav">
+      <div class="inele">
+        <label for="sdate">from:</label>
+        <input type="date" name="sdate" id="sdate">
+      </div>
+      <div class="inele">
+        <label for="edate">to:</label>
+        <input type="date" name="edate" id="edate">
+      </div>
+      <div class="inele">
+        <label for="block">Block:</label>
+        <select name="block" id="block" oninput="connect(this)">
+          {% for block in blocks %}
+          <option value="{{block.id}}">{{block.name}}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="inele">
+        <label for="room">Room</label>
+        <select name="room" id="room" oninput="getData(this)">
+          <option value="-">-</option>
+        </select>
+      </div>
+
+      <div class="inele">
+        <label class="downloadButton" onclick="downloadTableAsCSV('reportTable')">Download excel</label>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="top-line">
+      </div>
+      <div class="row home__hero-row" id="tableContainer">
+        <table id="reportTable" class="container">
+          <thead>
+            <tr>
+              <th>cam</th>
+              <th>P1</th>
+              <th>P2</th>
+              <th>P3</th>
+              <th>P4</th>
+              <th>P5</th>
+              <th>P6</th>
+              <th>P7</th>
+              <th>P8</th>
+              <th>P9</th>
+              <th>P10</th>
+            </tr>
+          </thead>
+          <tbody id="tabledata">
+            {% for d in data %}
+            <tr>
+              <td>{{d.name}}</td>
+              {% for val in d.today %}
+              <td><div>{{val}}</div></td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; justify-content: center;">
+    <!-- <canvas id="canvas" style="background: white;"></canvas> -->
+    <canvas id="canvas" style="background: white;" width="400" height="400"></canvas>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    var myChart;
+    function createAggregateGraphFromTable(tableId, canvasId, distroy=true) {
+      var table = document.getElementById(tableId);
+      var labels = []; // For X-axis labels (dates)
+      var data = []; // Aggregate data for each date
+
+      // Loop through rows to fill labels and calculate aggregate data
+      for (var i = 1; i < table.rows.length; i++) { // Start from 1 to skip header row
+        labels.push(table.rows[i].cells[0].innerText); // First column as label (date)
+        let sum = 0;
+        for (var j = 1; j < table.rows[i].cells.length; j++) {
+          var numb = table.rows[i].cells[j].getElementsByTagName("div")[0].innerText;
+          console.log(numb);
+          //var numb = table.rows[i].cells[j].innerText;
+          numb = (numb == "-") ? 0 : numb;
+          sum += parseFloat(numb); // Assume numeric values; adjust parsing as necessary
+        }
+        let avg = sum / (table.rows[i].cells.length - 1); // Calculate average
+        data.push(avg);
+      }
+
+      // Create the chart
+      if (distroy) {
+        myChart.destroy();
+      }
+
+      var ctx = document.getElementById(canvasId).getContext('2d');
+      myChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Average Value',
+            data: data,
+            borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true
+            },
+          },
+          plugins: {
+            title: {
+                display: true,
+                text: block.options[block.selectedIndex].text+" - "+room.options[room.selectedIndex].text, // Your title text here
+                font: {
+                    size: 18 // You can adjust the font size here
+                },
+                padding: {
+                    top: 10,
+                    bottom: 30 // Adjust the padding as needed
+                },
+                color: '#666', // Adjust the title color if needed
+                position: 'top' // Position of the title ('top', 'left', 'bottom', 'right')
+            }
+        }
+        }
+      });
+    }
+
+    createAggregateGraphFromTable('reportTable', 'canvas', false)
+
+    function getRandomColor() {
+      var letters = '0123456789ABCDEF';
+      var color = '#';
+      for (var i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+      }
+      return color;
+    }
+  </script>
+  <script>
+    const csrftoken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const room = document.getElementById('room');
+    const block = document.getElementById('block');
+
+    const sdate = document.getElementById('sdate');
+    const edate = document.getElementById('edate');
+    const tabledata = document.getElementById("tabledata");
+
+    function connect(bid) {
+      urlneed = window.location.protocol + "//" + window.location.host + "/reports/datacam/" + parseInt(bid.value);
+      fetch(urlneed, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrftoken,
+        },
+        body: JSON.stringify({ 'a': 1 })
+      })
+        .then(response => response.text())
+        .then(data => {
+          // console.log('Success:', data);
+          room.innerHTML = data;
+          // d = data;
+        })
+        .catch((error) => {
+          console.error('Error:', error);
+        });
+
+    }
+
+    function getData(bid) {
+      urlneed = window.location.protocol + "//" + window.location.host + "/reports/nums/";
+      fetch(urlneed, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrftoken,
+        },
+        body: JSON.stringify({ 'room': bid.value, 'sdate': sdate.value, 'edate': edate.value })
+      })
+        .then(response => response.text())
+        .then(data => {
+          // console.log('Success:', data);
+          tabledata.innerHTML = data;
+          createAggregateGraphFromTable('reportTable', 'canvas', true);
+          // room.innerHTML = data;
+          // d = data;
+        })
+        .catch((error) => {
+          console.error('Error:', error);
+        });
+    }
+
+    connect(block);
+
+
+    function downloadTableAsCSV(tableName) {
+      var table = document.getElementById(tableName);
+      var csvString = '';
+      for (var i = 0; i < table.rows.length; i++) {
+        var rowData = [];
+        for (var j = 0; j < table.rows[i].cells.length; j++) {
+          rowData.push(table.rows[i].cells[j].innerText);
+        }
+        csvString += rowData.join(",") + "\n";
+      }
+
+      // Create CSV Blob
+      var blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+
+      // Create a link to download it
+      var downloadLink = document.createElement("a");
+      var url = URL.createObjectURL(blob);
+      downloadLink.href = url;
+      downloadLink.setAttribute("download", "table_data.csv");
+
+      document.body.appendChild(downloadLink); // Required for FF
+
+      downloadLink.click();
+
+      document.body.removeChild(downloadLink); // Clean up
+    }
+
+    // downloadTableAsCSV("reportTable");
+  </script>
+  <!-- <script src="main.js"></script> -->
+  <!-- <script> -->
+  <!-- window.onload = selectBlock('Law Block'); -->
+  <!-- </script> -->
+</body>
+
+</html>

@@ -1,0 +1,465 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  <style>
+    .nav-menu{
+      list-style: none;
+      display: flex;
+    }
+    .nav-item{
+      color: white;
+      text-decoration: none;
+      font-size: 30px;
+      margin: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="flex-container">
+    <header class="header">
+      <div class="header-right">
+        <a href="/" class="navbar-logo">
+          <img src='https://pbs.twimg.com/profile_images/585337421434265600/0lMPLueB_400x400.png' width="40" height="40"
+            style="border-radius: .5rem;" />
+          <h3>JECRC UNIVERSITY</h3>
+        </a>
+      </div>
+      <div class="menu-icon" style="display: block;">
+        <ul class='nav-menu'>
+          <li class="nav-item"><a href="/" class="nav-links" style="color: white;">Home</a></li>
+          <li class="nav-item"><a href="/reports/" class="nav-links" style="color: white;">Reports</a></li>
+          <li class="nav-item"><a href="/reports/insight/" class="nav-links" style="color: white;">All</a></li>
+        </ul>
+      </div>
+    </header>
+
+    <div class="main-container">
+      <div class="main-title">
+        <h2>DASHBOARD</h2>
+      </div>
+      <div>
+        <form action="/reports/getudate/" method="post">
+          {% csrf_token %}
+          <label for="startdate">Start Date</label><input type="date" name="startdate" id="startdate" style="margin-right: 5px;">
+          <label for="enddate">End Date</label><input type="date" name="enddate" id="enddate" style="margin-right: 5px;">
+          <button>Submit</button>
+        </form>
+      </div>
+      <div align="center">from {{from_date}}  to {{end_date}}</div>
+      <!-- Main Cards  -->
+
+      <div class="charts">
+        <div class="charts-card">
+          <h2 class="chart-title">Peak Days</h2>
+          <div id="bar-chart"></div>
+        </div>
+        <div class="charts-card">
+          <h2 class="chart-title">Peak Hours</h2>
+          <div id="area-chart"></div>
+        </div>
+      </div>
+
+      <div class="main-cards">
+        <div class="card">
+          <div class="card-inner">
+            <h3>CLASS PRESENCE RATE</h3>
+          </div>
+          <div class="tables" id="lists"></div>
+        </div>
+        <div class="card">
+          <div class="card-inner">
+            <h3>CLASS INSIGHTS</h3>
+          </div>
+          <div id="insights"></div>
+        </div>
+        <div class="card">
+          <div class="card-inner">
+            <h3>ROOM OCCUPANCY RATE</h3>
+          </div>
+          <div class="tables" id="room"></div>
+        </div>
+        <div class="card">
+          <div class="card-inner">
+            <h3>Room Insight</h3>
+          </div>
+          <div id="roominsights"></div>
+        </div>
+        <div class="card">
+          <div class="card-inner">
+            <h3>TEACHER CLASS ANALYSIS</h3>
+          </div>
+          <div class="tables" id="tables"></div>
+        </div>
+        <div class="card">
+          <div class="card-inner">
+            <h3>AVG. STUDENTS IN CLASSES</h3>
+          </div>
+          <div id="teacherI"></div>
+        </div>
+      </div>
+
+
+    </div>
+
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.35.5/apexcharts.min.js"></script>
+  <!-- <script src="{% static 'js/scripts.js' %}"></script> -->
+  <script>
+    let classList = ['LT-47', 'LT-12', 'LT-83', 'LT-61', 'LT-90', 'LT-05', 'LT-74', 'LT-33', 'LT-22', 'LT-92'];
+    let sampleClassList = [
+      {% for s in class_result_table %}
+      { 'class_name': "{{s.0}}", 'occupancy_rate_%': {{s.1|floatformat:2}}},
+      {% endfor %}
+    ];
+    let rommList = [
+      {% for s in room_result_table %}
+      { 'room_name': "{{s.0}}", 'occupancy_rate_%': {{s.1|floatformat:2}}},
+      {% endfor %}
+    ];
+    let sampleData = [
+      {% for s in teacher_result_table %}
+      { 'teacher_name': "{{s.0}}", 'Full Report': "<a href='/reports/teachers/{{s.0}}'>Click</a>" ,'Attendance_%': {{s.1|floatformat:2}}},
+      {% endfor %}
+    ];
+
+    function createAndAppendTable(data, containerId) {
+      var container = document.getElementById(containerId);
+      var table = document.createElement("table");
+      table.setAttribute("id", "dataTable");
+
+      var tableHead = document.createElement("thead");
+      var headRow = document.createElement("tr");
+      Object.keys(data[0]).forEach(function (key) {
+        var th = document.createElement("th");
+        let finalKey = key.replace(/_/g, ' ').toUpperCase();
+        th.textContent = finalKey;
+        headRow.appendChild(th);
+      });
+      tableHead.appendChild(headRow);
+      table.appendChild(tableHead);
+
+      var tableBody = document.createElement("tbody");
+      data.forEach(function (rowData) {
+        var row = document.createElement("tr");
+        Object.values(rowData).forEach(function (value) {
+          var cell = document.createElement("td");
+          cell.innerHTML = value;
+          row.appendChild(cell);
+        });
+        tableBody.appendChild(row);
+      });
+      table.appendChild(tableBody);
+
+      container.appendChild(table);
+    }
+    function createAndAppendLists(data, containerId) {
+      var container = document.getElementById(containerId);
+      data.map(value => {
+        var listItem = document.createElement("li");
+        listItem.textContent = value;
+        container.appendChild(listItem);
+      });
+    }
+    function generateInsights(data, containerId, cols) {
+      var occupancyRate = data.map(value => value[cols]);
+      console.log(occupancyRate);
+      var above50 = occupancyRate.filter(value => value > 50).length;
+      let leastOccupied = occupancyRate.reduce((prev, current) => (prev < current) ? prev : current);
+      let mostOCcupied = occupancyRate.reduce((prev, current) => (prev > current) ? prev : current);
+      var container = document.getElementById(containerId);
+      var insights = document.createElement("div");
+      insights.innerHTML = `
+  <h4>Highest Occupancy Rate: ${mostOCcupied}%</h4>
+  <h4>Number of classes with occupancy rate above 50%:  ${above50}</h4>
+  <h4>Number of classes with occupancy rate below 50%:  ${occupancyRate.length - above50}</h4>
+  `
+      container.appendChild(insights);
+    }
+
+    createAndAppendTable(sampleData, "tables");
+    createAndAppendTable(sampleClassList, "lists");
+    createAndAppendTable(rommList, "room");
+    generateInsights(sampleClassList, "insights", "occupancy_rate_%")
+    generateInsights(rommList, "roominsights", "occupancy_rate_%")
+    generateInsights(sampleData, "teacherI", "Attendance_%")
+
+
+    // SIDEBAR TOGGLE
+    let sidebarOpen = false;
+    const sidebar = document.getElementById('sidebar');
+
+    function openSidebar() {
+      if (!sidebarOpen) {
+        sidebar.classList.add('sidebar-responsive');
+        sidebarOpen = true;
+      }
+    }
+
+    function closeSidebar() {
+      if (sidebarOpen) {
+        sidebar.classList.remove('sidebar-responsive');
+        sidebarOpen = false;
+      }
+    }
+
+    // ---------- CHARTS ----------
+
+    // BAR CHART
+    const barChartOptions = {
+      series: [
+        {
+          data: {{days_report_table}},
+          // data: [30, 49, 47, 44, 37, 20],
+          name: 'Avg Student Present',
+        },
+      ],
+      chart: {
+        type: 'bar',
+        background: 'transparent',
+        height: 350,
+        toolbar: {
+          show: false,
+        },
+      },
+      colors: ['#2962ff', '#d50000', '#2e7d32', '#ff6d00', '#583cb3', '#27a5f9'],
+      plotOptions: {
+        bar: {
+          distributed: true,
+          borderRadius: 4,
+          horizontal: false,
+          columnWidth: '40%',
+        },
+      },
+      dataLabels: {
+        enabled: false,
+      },
+      fill: {
+        opacity: 1,
+      },
+      grid: {
+        borderColor: '#55596e',
+        yaxis: {
+          lines: {
+            show: true,
+          },
+        },
+        xaxis: {
+          lines: {
+            show: true,
+          },
+        },
+      },
+      legend: {
+        labels: {
+          colors: '#f5f7ff',
+        },
+        show: true,
+        position: 'top',
+      },
+      stroke: {
+        colors: ['transparent'],
+        show: true,
+        width: 2,
+      },
+      tooltip: {
+        shared: true,
+        intersect: false,
+        theme: 'dark',
+      },
+      xaxis: {
+        // categories: ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'],
+        // categories: ['Laptop', 'Phone', 'Monitor', 'Headphones', 'Camera'],
+        categories: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+        title: {
+          style: {
+            color: '#f5f7ff',
+          },
+        },
+        axisBorder: {
+          show: true,
+          color: '#55596e',
+        },
+        axisTicks: {
+          show: true,
+          color: '#55596e',
+        },
+        labels: {
+          style: {
+            colors: '#f5f7ff',
+          },
+        },
+      },
+      yaxis: {
+        title: {
+          text: 'Count',
+          style: {
+            color: '#f5f7ff',
+          },
+        },
+        axisBorder: {
+          color: '#55596e',
+          show: true,
+        },
+        axisTicks: {
+          color: '#55596e',
+          show: true,
+        },
+        labels: {
+          formatter: function(value) {
+                          return Math.round(value); // Round the numeric values to remove excessive decimal places
+                        },
+          style: {
+            colors: '#f5f7ff',
+          },
+        },
+      },
+    };
+
+    const barChart = new ApexCharts(
+      document.querySelector('#bar-chart'),
+      barChartOptions
+    );
+    barChart.render();
+
+    // AREA CHART
+    const areaChartOptions = {
+      series: [
+        {
+          name: 'Avg. Students in First Shift',
+          data: {{first_shift}},
+        },
+        {
+          name: 'Avg. Students in Second Shift',
+          data: {{second_shift}},
+        },
+      ],
+      chart: {
+        type: 'area',
+        background: 'transparent',
+        height: 350,
+        stacked: false,
+        toolbar: {
+          show: false,
+        },
+      },
+      colors: ['#00ab57', '#d50000'],
+      labels: ['Lect-01', 'Lect-02', 'Lect-03', 'Lect-04', 'Lect-05', 'Lect-06'],
+      dataLabels: {
+        enabled: false,
+      },
+      fill: {
+        gradient: {
+          opacityFrom: 0.4,
+          opacityTo: 0.1,
+          shadeIntensity: 1,
+          stops: [0, 100],
+          type: 'vertical',
+        },
+        type: 'gradient',
+      },
+      grid: {
+        borderColor: '#55596e',
+        yaxis: {
+          lines: {
+            show: true,
+          },
+        },
+        xaxis: {
+          lines: {
+            show: true,
+          },
+        },
+      },
+      legend: {
+        labels: {
+          colors: '#f5f7ff',
+        },
+        show: true,
+        position: 'top',
+      },
+      markers: {
+        size: 6,
+        strokeColors: '#1b2635',
+        strokeWidth: 3,
+      },
+      stroke: {
+        curve: 'smooth',
+      },
+      xaxis: {
+        axisBorder: {
+          color: '#55596e',
+          show: true,
+        },
+        axisTicks: {
+          color: '#55596e',
+          show: true,
+        },
+        labels: {
+          offsetY: 5,
+          style: {
+            colors: '#f5f7ff',
+          },
+        },
+      },
+      yaxis: [
+        {
+          title: {
+            text: 'Students in First Shift',
+            style: {
+              color: '#f5f7ff',
+            },
+          },
+          labels: {
+            formatter: function(value) {
+                          return Math.round(value); // Round the numeric values to remove excessive decimal places
+                        },
+            style: {
+              colors: ['#f5f7ff'],
+            },
+          },
+        },
+        {
+          opposite: true,
+          title: {
+            text: 'Students in Second Shift',
+            style: {
+              color: '#f5f7ff',
+            },
+          },
+          labels: {
+            formatter: function(value) {
+                          return Math.round(value); // Round the numeric values to remove excessive decimal places
+                        },
+            style: {
+              colors: ['#f5f7ff'],
+            },
+          },
+        },
+      ],
+      tooltip: {
+        shared: true,
+        intersect: false,
+        theme: 'dark',
+      },
+    };
+
+    const areaChart = new ApexCharts(
+      document.querySelector('#area-chart'),
+      areaChartOptions
+    );
+    areaChart.render();
+
+  </script>
+</body>
+
+</html>
